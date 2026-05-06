@@ -176,7 +176,6 @@ button {
 
 <script> 
 
-let msgIndex = 0; // 用于记录消息序号 
 
 let supabaseClient = null
 let latestText = ""
@@ -186,82 +185,85 @@ document.addEventListener("DOMContentLoaded", () => {
   const URL = "https://dqmrzxltmwwtdziidqmg.supabase.co"
   const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxbXJ6eGx0bXd3dGR6aWlkcW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzQyNDcsImV4cCI6MjA5MzY1MDI0N30.nFrYz5XRzgfcXj3O0bnBqP9gzvDQvFypu6QgrLOGkCo"
 
-  supabaseClient = window.supabase.createClient(URL, KEY)
+ // ===== 初始化 Supabase 客户端 =====
+supabaseClient = window.supabase.createClient(URL, KEY)
 
-  document.getElementById("status").innerText = "连接中..."
+document.getElementById("status").innerText = "连接中..."
 
-  supabaseClient
-    .channel('pastebox-sync')
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'data'
-    }, (payload) => {
+// ===== 全局消息索引，用于控制灰白交替 =====
+let msgIndex = 0
 
-      const text = payload.new.text
-      latestText = text
+supabaseClient
+  .channel('pastebox-sync')
+  .on('postgres_changes', {
+    event: 'INSERT',
+    schema: 'public',
+    table: 'data'
+  }, (payload) => {
+
+    const text = payload.new.text
+    latestText = text
+
+    // ===== 创建消息容器 =====
+    const div = document.createElement("div")
+    div.className = "msg"
+    div.innerText = text
+
+    // ===== 灰白交替 =====
+    div.style.background = (msgIndex % 2 === 0) ? "#f0f0f0" : "#ffffff"
+    msgIndex++
+
+    // ===== 右上角按钮 =====
+    const actions = document.createElement("div")
+    actions.className = "msg-actions"
+
+    // 复制按钮
+    const copyBtn = document.createElement("button")
+    copyBtn.className = "msg-btn"
+    copyBtn.innerText = "复制"
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(text)
+    }
+
+    // 删除按钮
+    const delBtn = document.createElement("button")
+    delBtn.className = "msg-btn"
+    delBtn.innerText = "删除"
+    delBtn.onclick = async () => {
+      const { error } = await supabaseClient
+        .from('data')
+        .delete()
+        .eq('id', payload.new.id)
+
+      if (error) {
+        alert("删除失败")
+        console.error(error)
+        return
+      }
+
+      div.remove()
+    }
+
+    actions.appendChild(copyBtn)
+    actions.appendChild(delBtn)
+    div.appendChild(actions)
+
+    const output = document.getElementById("output")
+    output.appendChild(div)
+
+    // ⭐ 自动滚到底部
+    output.scrollTop = output.scrollHeight
+
+    document.getElementById("status").innerText = "已同步 ✔"
+
+  })
+  .subscribe((status) => {
+    document.getElementById("status").innerText =
+      status === "SUBSCRIBED" ? "已连接 ✔" : "连接中..." 
+
+  }) 
 
 
-   let msgIndex = 0; // 用于控制消息背景交替颜色
-
-const div = document.createElement("div");
-div.className = "msg";
-div.innerText = text;
-
-// ===== 两色交替 =====
-div.style.background = (msgIndex % 2 === 0) ? "#f0f0f0" : "#ffffff";
-msgIndex++;
-
-// ===== 右上角按钮 =====
-const actions = document.createElement("div");
-actions.className = "msg-actions";
-
-// 复制按钮
-const copyBtn = document.createElement("button");
-copyBtn.className = "msg-btn";
-copyBtn.innerText = "复制";
-copyBtn.onclick = () => {
-  navigator.clipboard.writeText(text);
-};
-
-// 删除按钮
-const delBtn = document.createElement("button");
-delBtn.className = "msg-btn";
-delBtn.innerText = "删除";
-delBtn.onclick = async () => {
-
-  const { error } = await supabaseClient
-    .from('data')
-    .delete()
-    .eq('id', payload.new.id); // ⚠️ 注意这里
-
-  if (error) {
-    alert("删除失败");
-    console.error(error);
-    return;
-  }
-
-  div.remove();
-};
-
-actions.appendChild(copyBtn);
-actions.appendChild(delBtn);
-div.appendChild(actions);
-
-const output = document.getElementById("output");
-output.appendChild(div);
-
-// ⭐ 自动滚到底部（聊天核心体验）
-output.scrollTop = output.scrollHeight;
-
-document.getElementById("status").innerText = "已同步 ✔"; 
-
-
-    })
-    .subscribe((status) => {
-      document.getElementById("status").innerText =
-        status === "SUBSCRIBED" ? "已连接 ✔" : "连接中..."
-    })
 })
 
 
@@ -315,7 +317,5 @@ ${latestText}
 
 </script> 
 
-
-
 </body>
-</html>  
+</html>   
