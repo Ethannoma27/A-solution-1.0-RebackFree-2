@@ -174,95 +174,120 @@ button {
 
 </div>
 
-<script> 
 
+
+<script>
 
 let supabaseClient = null
 let latestText = ""
+let msgIndex = 0 // 灰白交替控制
 
-document.addEventListener("DOMContentLoaded", () => {
+// ===== Markdown 解析（轻量版）=====
+function parseMarkdown(text) {
+  return text
+    .replace(/^## (.*$)/gim, '<h3>$1</h3>')
+    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+    .replace(/^\* (.*$)/gim, '<li>$1</li>')
+    .replace(/\n/g, '<br>')
+}
+
+// ===== 渲染消息（统一入口）=====
+function renderMsg(text, id) {
+
+  const div = document.createElement("div")
+  div.className = "msg"
+
+  // 👉 AI 样式渲染
+  div.innerHTML = parseMarkdown(text)
+
+  // 灰白交替
+  div.style.background = (msgIndex % 2 === 0) ? "#f0f0f0" : "#ffffff"
+  msgIndex++
+
+  // ===== 按钮 =====
+  const actions = document.createElement("div")
+  actions.className = "msg-actions"
+
+  const copyBtn = document.createElement("button")
+  copyBtn.className = "msg-btn"
+  copyBtn.innerText = "复制"
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(text)
+  }
+
+  const delBtn = document.createElement("button")
+  delBtn.className = "msg-btn"
+  delBtn.innerText = "删除"
+  delBtn.onclick = async () => {
+
+    const { error } = await supabaseClient
+      .from('data')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      alert("删除失败")
+      console.error(error)
+      return
+    }
+
+    div.remove()
+  }
+
+  actions.appendChild(copyBtn)
+  actions.appendChild(delBtn)
+  div.appendChild(actions)
+
+  const output = document.getElementById("output")
+  output.appendChild(div)
+
+  output.scrollTop = output.scrollHeight
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
 
   const URL = "https://dqmrzxltmwwtdziidqmg.supabase.co"
   const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxbXJ6eGx0bXd3dGR6aWlkcW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzQyNDcsImV4cCI6MjA5MzY1MDI0N30.nFrYz5XRzgfcXj3O0bnBqP9gzvDQvFypu6QgrLOGkCo"
 
- // ===== 初始化 Supabase 客户端 =====
-supabaseClient = window.supabase.createClient(URL, KEY)
+  supabaseClient = window.supabase.createClient(URL, KEY)
 
-document.getElementById("status").innerText = "连接中..."
+  const status = document.getElementById("status")
+  status.innerText = "连接中..."
 
-// ===== 全局消息索引，用于控制灰白交替 =====
-let msgIndex = 0
+  // ===== ✅ 加载历史记录 =====
+  const { data, error } = await supabaseClient
+    .from('data')
+    .select('*')
+    .order('id', { ascending: true })
 
-supabaseClient
-  .channel('pastebox-sync')
-  .on('postgres_changes', {
-    event: 'INSERT',
-    schema: 'public',
-    table: 'data'
-  }, (payload) => {
+  if (!error && data) {
+    data.forEach(item => {
+      latestText = item.text
+      renderMsg(item.text, item.id)
+    })
+  }
 
-    const text = payload.new.text
-    latestText = text
+  // ===== 实时监听 =====
+  supabaseClient
+    .channel('pastebox-sync')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'data'
+    }, (payload) => {
 
-    // ===== 创建消息容器 =====
-    const div = document.createElement("div")
-    div.className = "msg"
-    div.innerText = text
+      const text = payload.new.text
+      latestText = text
 
-    // ===== 灰白交替 =====
-    div.style.background = (msgIndex % 2 === 0) ? "#f0f0f0" : "#ffffff"
-    msgIndex++
+      renderMsg(text, payload.new.id)
 
-    // ===== 右上角按钮 =====
-    const actions = document.createElement("div")
-    actions.className = "msg-actions"
+      status.innerText = "已同步 ✔"
+    })
 
-    // 复制按钮
-    const copyBtn = document.createElement("button")
-    copyBtn.className = "msg-btn"
-    copyBtn.innerText = "复制"
-    copyBtn.onclick = () => {
-      navigator.clipboard.writeText(text)
-    }
-
-    // 删除按钮
-    const delBtn = document.createElement("button")
-    delBtn.className = "msg-btn"
-    delBtn.innerText = "删除"
-    delBtn.onclick = async () => {
-      const { error } = await supabaseClient
-        .from('data')
-        .delete()
-        .eq('id', payload.new.id)
-
-      if (error) {
-        alert("删除失败")
-        console.error(error)
-        return
-      }
-
-      div.remove()
-    }
-
-    actions.appendChild(copyBtn)
-    actions.appendChild(delBtn)
-    div.appendChild(actions)
-
-    const output = document.getElementById("output")
-    output.appendChild(div)
-
-    // ⭐ 自动滚到底部
-    output.scrollTop = output.scrollHeight
-
-    document.getElementById("status").innerText = "已同步 ✔"
-
-  })
-  .subscribe((status) => {
-    document.getElementById("status").innerText =
-      status === "SUBSCRIBED" ? "已连接 ✔" : "连接中..." 
-
-  }) 
-
+    .subscribe((state) => {
+      status.innerText =
+        state === "SUBSCRIBED" ? "已连接 ✔" : "连接中..."
+    })
 
 })
 
@@ -315,7 +340,12 @@ ${latestText}
   document.getElementById("status").innerText = "已复制带格式版本 ✔"
 }
 
+
+
+
 </script> 
+
+
 
 </body>
 </html>   
