@@ -117,7 +117,34 @@ button {
   text-align: center;
   font-size: 12px;
   color: #666;
+} 
+
+.msg {
+  position: relative;
 }
+
+/* 右上角按钮容器 */
+.msg-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+/* 按钮样式 */
+.msg-btn {
+  font-size: 11px;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #f3f4f6;
+}
+
+.msg-btn:hover {
+  background: #e5e7eb;
+} 
 </style>
 </head>
 
@@ -172,9 +199,47 @@ document.addEventListener("DOMContentLoaded", () => {
       const text = payload.new.text
       latestText = text
 
+
       const div = document.createElement("div")
-      div.className = "msg"
-      div.innerText = text
+div.className = "msg"
+div.innerText = text
+
+// ===== 右上角按钮 =====
+const actions = document.createElement("div")
+actions.className = "msg-actions"
+
+// 复制
+const copyBtn = document.createElement("button")
+copyBtn.className = "msg-btn"
+copyBtn.innerText = "复制"
+copyBtn.onclick = () => {
+  navigator.clipboard.writeText(text)
+}
+
+// 删除
+const delBtn = document.createElement("button")
+delBtn.className = "msg-btn"
+delBtn.innerText = "删除"
+delBtn.onclick = async () => {
+
+  const { error } = await supabaseClient
+    .from('data')
+    .delete()
+    .eq('id', payload.new.id) // ⚠️ 注意这里
+
+  if (error) {
+    alert("删除失败")
+    console.error(error)
+    return
+  }
+
+  div.remove()
+}
+
+actions.appendChild(copyBtn)
+actions.appendChild(delBtn)
+
+div.appendChild(actions) 
 
       const output = document.getElementById("output")
       output.appendChild(div)
@@ -243,10 +308,5 @@ ${latestText}
 
 
 
-
-
-
-
-
 </body>
-</html> 
+</html>  

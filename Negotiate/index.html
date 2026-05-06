@@ -174,7 +174,9 @@ button {
 
 </div>
 
-<script>
+<script> 
+
+let msgIndex = 0; // 用于记录消息序号 
 
 let supabaseClient = null
 let latestText = ""
@@ -200,54 +202,61 @@ document.addEventListener("DOMContentLoaded", () => {
       latestText = text
 
 
-      const div = document.createElement("div")
-div.className = "msg"
-div.innerText = text
+   let msgIndex = 0; // 用于控制消息背景交替颜色
+
+const div = document.createElement("div");
+div.className = "msg";
+div.innerText = text;
+
+// ===== 两色交替 =====
+div.style.background = (msgIndex % 2 === 0) ? "#f0f0f0" : "#ffffff";
+msgIndex++;
 
 // ===== 右上角按钮 =====
-const actions = document.createElement("div")
-actions.className = "msg-actions"
+const actions = document.createElement("div");
+actions.className = "msg-actions";
 
-// 复制
-const copyBtn = document.createElement("button")
-copyBtn.className = "msg-btn"
-copyBtn.innerText = "复制"
+// 复制按钮
+const copyBtn = document.createElement("button");
+copyBtn.className = "msg-btn";
+copyBtn.innerText = "复制";
 copyBtn.onclick = () => {
-  navigator.clipboard.writeText(text)
-}
+  navigator.clipboard.writeText(text);
+};
 
-// 删除
-const delBtn = document.createElement("button")
-delBtn.className = "msg-btn"
-delBtn.innerText = "删除"
+// 删除按钮
+const delBtn = document.createElement("button");
+delBtn.className = "msg-btn";
+delBtn.innerText = "删除";
 delBtn.onclick = async () => {
 
   const { error } = await supabaseClient
     .from('data')
     .delete()
-    .eq('id', payload.new.id) // ⚠️ 注意这里
+    .eq('id', payload.new.id); // ⚠️ 注意这里
 
   if (error) {
-    alert("删除失败")
-    console.error(error)
-    return
+    alert("删除失败");
+    console.error(error);
+    return;
   }
 
-  div.remove()
-}
+  div.remove();
+};
 
-actions.appendChild(copyBtn)
-actions.appendChild(delBtn)
+actions.appendChild(copyBtn);
+actions.appendChild(delBtn);
+div.appendChild(actions);
 
-div.appendChild(actions) 
+const output = document.getElementById("output");
+output.appendChild(div);
 
-      const output = document.getElementById("output")
-      output.appendChild(div)
+// ⭐ 自动滚到底部（聊天核心体验）
+output.scrollTop = output.scrollHeight;
 
-      // ⭐自动滚到底部（聊天核心体验）
-      output.scrollTop = output.scrollHeight
+document.getElementById("status").innerText = "已同步 ✔"; 
 
-      document.getElementById("status").innerText = "已同步 ✔"
+
     })
     .subscribe((status) => {
       document.getElementById("status").innerText =
