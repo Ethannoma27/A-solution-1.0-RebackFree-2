@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>同步剪贴板</title>
+<title>Pastebox 同步剪贴板</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
@@ -20,11 +20,11 @@ body {
 
 .container {
   width: 90%;
-  max-width: 500px;
+  max-width: 520px;
   background: white;
   padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
 h2 {
@@ -36,8 +36,9 @@ input {
   width: 100%;
   padding: 12px;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 16px;
+  outline: none;
 }
 
 button {
@@ -45,8 +46,9 @@ button {
   padding: 12px;
   margin-top: 10px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
+  font-size: 15px;
 }
 
 .send {
@@ -65,9 +67,8 @@ button {
   overflow-y: auto;
   background: #f9fafb;
   border: 1px solid #eee;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 10px;
-
   white-space: pre-wrap;
 }
 
@@ -75,15 +76,15 @@ button {
   padding: 8px;
   margin-bottom: 8px;
   background: white;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #eee;
 }
 
 .status {
   text-align: center;
   font-size: 13px;
-  color: #888;
-  margin-top: 8px;
+  color: #666;
+  margin-top: 10px;
 }
 </style>
 </head>
@@ -91,7 +92,7 @@ button {
 <body>
 
 <div class="container">
-  <h2>📋 同步剪贴板</h2>
+  <h2>📋 Pastebox 剪贴板</h2>
 
   <input id="input" placeholder="输入内容...">
   <button class="send" onclick="send()">发送</button>
@@ -100,35 +101,81 @@ button {
 
   <button class="copy" onclick="copyText()">复制最新一条</button>
 
-  <div class="status" id="status">未连接</div>
+  <div class="status" id="status">初始化中...</div>
 </div>
 
 <script>
-// ======================
-// 🔑 Supabase 配置
-// ======================
 
-const URL = "https://dqmrzxltmwwtdziidqmg.supabase.co"
-const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxbXJ6eGx0bXd3dGR6aWlkcW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzQyNDcsImV4cCI6MjA5MzY1MDI0N30.nFrYz5XRzgfcXj3O0bnBqP9gzvDQvFypu6QgrLOGkCo"
-
-
-// 防呆
-if (!KEY || KEY.includes("你的")) {
-  alert("请先填写 Supabase KEY")
-  throw new Error("Missing KEY")
-}
-
-// ⚠️ 防止重复声明（核心修复）
-let supabaseClient = window.supabase.createClient(URL, KEY)
-
+let supabaseClient = null
 let latestText = ""
 
+// =======================
+// 初始化
+// =======================
+document.addEventListener("DOMContentLoaded", () => {
 
-// ======================
-// 📤 发送数据
-// ======================
+  const URL = "https://dqmrzxltmwwtdziidqmg.supabase.co".trim()
+  const KEY = "YOUR_SUPABASE_ANON_KEY"
+
+  if (!KEY || KEY.includes("YOUR")) {
+    alert("请填写 Supabase Anonymous API Key")
+    return
+  }
+
+  try {
+    supabaseClient = window.supabase.createClient(URL, KEY)
+  } catch (err) {
+    console.error(err)
+    document.getElementById("status").innerText = "初始化失败"
+    return
+  }
+
+  document.getElementById("status").innerText = "连接中..."
+
+  // =======================
+  // 实时监听
+  // =======================
+  supabaseClient
+    .channel('pastebox-sync')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'data'
+    }, (payload) => {
+
+      const text = payload.new.text
+      latestText = text
+
+      const div = document.createElement("div")
+      div.className = "msg"
+      div.innerText = text
+
+      const output = document.getElementById("output")
+      output.appendChild(div)
+      output.scrollTop = output.scrollHeight
+
+      document.getElementById("status").innerText = "已同步 ✔"
+    })
+    .subscribe((status) => {
+      document.getElementById("status").innerText =
+        status === "SUBSCRIBED" ? "已连接 ✔" : "连接中..."
+    })
+})
+
+
+// =======================
+// 发送
+// =======================
 async function send() {
-  const text = document.getElementById("input").value
+
+  if (!supabaseClient) {
+    alert("Supabase 未初始化完成")
+    return
+  }
+
+  const input = document.getElementById("input")
+  const text = input.value.trim()
+
   if (!text) return
 
   const { error } = await supabaseClient
@@ -137,53 +184,17 @@ async function send() {
 
   if (error) {
     alert("发送失败：" + error.message)
-    console.log(error)
     return
   }
 
-  document.getElementById("input").value = ""
+  input.value = ""
   document.getElementById("status").innerText = "发送成功 ✔"
 }
 
 
-// ======================
-// 📡 实时监听
-// ======================
-supabaseClient
-  .channel('clipboard-sync')
-  .on('postgres_changes', {
-    event: 'INSERT',
-    schema: 'public',
-    table: 'data'
-  }, (payload) => {
-
-    const text = payload.new.text
-    latestText = text
-
-    const div = document.createElement("div")
-    div.className = "msg"
-    div.innerText = text
-
-    const output = document.getElementById("output")
-    output.appendChild(div)
-    output.scrollTop = output.scrollHeight
-
-    document.getElementById("status").innerText = "已同步 ✔"
-  })
-  .subscribe((status) => {
-    console.log("Realtime status:", status)
-
-    if (status === "SUBSCRIBED") {
-      document.getElementById("status").innerText = "已连接 ✔"
-    } else {
-      document.getElementById("status").innerText = "连接中..."
-    }
-  })
-
-
-// ======================
-// 📋 复制
-// ======================
+// =======================
+// 复制最新
+// =======================
 function copyText() {
   if (!latestText) {
     alert("没有内容")
@@ -193,8 +204,9 @@ function copyText() {
   navigator.clipboard.writeText(latestText)
   document.getElementById("status").innerText = "已复制 ✔"
 }
+
 </script>
 
-</body>
-</html>
+</body> 
 
+</html>  
