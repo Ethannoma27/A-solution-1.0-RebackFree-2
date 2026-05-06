@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>同步剪贴板</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 <style>
 body {
@@ -59,21 +59,18 @@ button {
   color: white;
 }
 
-/* 👇 核心：滚动区域 */
 #output {
   margin-top: 15px;
-  height: 200px;
+  height: 220px;
   overflow-y: auto;
   background: #f9fafb;
   border: 1px solid #eee;
   border-radius: 8px;
   padding: 10px;
 
-  /* 保留格式 */
   white-space: pre-wrap;
 }
 
-/* 每条消息 */
 .msg {
   padding: 8px;
   margin-bottom: 8px;
@@ -100,43 +97,67 @@ button {
   <button class="send" onclick="send()">发送</button>
 
   <div id="output"></div>
+
   <button class="copy" onclick="copyText()">复制最新一条</button>
 
   <div class="status" id="status">未连接</div>
 </div>
 
 <script>
+// ======================
+// 🔑 填你的 Supabase
+// ======================
 const URL = "https://dqmrzxltmwwtdziidqmg.supabase.co"
 const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxbXJ6eGx0bXd3dGR6aWlkcW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzQyNDcsImV4cCI6MjA5MzY1MDI0N30.nFrYz5XRzgfcXj3O0bnBqP9gzvDQvFypu6QgrLOGkCo"
 
-if (URL.includes("你的")) {
-  document.body.innerHTML = "<h3>请先填写 Supabase 配置</h3>"
-  throw new Error("未配置")
+// 防止没填 key
+if (!KEY || KEY.includes("你的")) {
+  alert("请先填写 Supabase KEY")
+  throw new Error("Missing KEY")
 }
 
+// 创建客户端
 const supabase = window.supabase.createClient(URL, KEY)
 
 let latestText = ""
 
+// 状态
 document.getElementById("status").innerText = "连接中..."
 
-// 发送
+
+// ======================
+// 📤 发送数据
+// ======================
 async function send() {
   const text = document.getElementById("input").value
   if (!text) return
 
-  await supabase.from('data').insert([{ text }])
+  const { error } = await supabase
+    .from('data')
+    .insert([{ text }])
+
+  if (error) {
+    alert("发送失败：" + error.message)
+    console.log(error)
+    return
+  }
+
   document.getElementById("input").value = ""
+  document.getElementById("status").innerText = "发送成功 ✔"
 }
 
-// 实时监听
+
+// ======================
+// 📡 实时监听
+// ======================
 supabase
-  .channel('data')
+  .channel('clipboard-sync')
   .on('postgres_changes', {
     event: 'INSERT',
     schema: 'public',
     table: 'data'
   }, (payload) => {
+
     const text = payload.new.text
     latestText = text
 
@@ -146,21 +167,30 @@ supabase
 
     const output = document.getElementById("output")
     output.appendChild(div)
-
-    // 自动滚到底
     output.scrollTop = output.scrollHeight
 
     document.getElementById("status").innerText = "已同步 ✔"
   })
-  .subscribe()
+  .subscribe((status) => {
+    console.log("Realtime status:", status)
+  })
 
-// 复制
+
+// ======================
+// 📋 复制
+// ======================
 function copyText() {
-  if (!latestText) return alert("没有内容")
+  if (!latestText) {
+    alert("没有内容")
+    return
+  }
+
   navigator.clipboard.writeText(latestText)
   document.getElementById("status").innerText = "已复制 ✔"
 }
 </script>
 
-</body>
-</html> 
+</body> 
+
+
+</html>   
