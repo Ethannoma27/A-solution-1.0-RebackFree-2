@@ -3,52 +3,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pastebox 同步剪贴板</title>
+<title>Pastebox Chat</title>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 <style>
+/* =======================
+   全局
+======================= */
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
   background: #f5f7fb;
+  height: 100vh;
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100vh;
 }
 
+/* =======================
+   主容器
+======================= */
 .container {
-  width: 90%;
+  width: 100%;
   max-width: 520px;
+  height: 100vh;
   background: white;
-  padding: 20px;
-  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
-h2 {
+/* =======================
+   标题
+======================= */
+.header {
+  padding: 14px;
   text-align: center;
-  margin-top: 0;
+  font-weight: bold;
+  border-bottom: 1px solid #eee;
 }
 
-input {
-  width: 100%;
+/* =======================
+   消息区（核心滚动区）
+======================= */
+#output {
+  flex: 1;
+  overflow-y: auto;
   padding: 12px;
+  background: #f9fafb;
+}
+
+/* 消息气泡 */
+.msg {
+  padding: 10px;
+  margin-bottom: 10px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #eee;
+  white-space: pre-wrap;
+}
+
+/* =======================
+   输入区（固定底部）
+======================= */
+.input-area {
+  padding: 10px;
+  border-top: 1px solid #eee;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 输入框 */
+textarea {
+  width: 100%;
+  height: 80px;
+  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 10px;
-  font-size: 16px;
+  resize: none;
+  font-size: 14px;
+  font-family: inherit;
   outline: none;
 }
 
+/* 按钮 */
 button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
+  padding: 10px;
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .send {
@@ -61,30 +107,16 @@ button {
   color: white;
 }
 
-#output {
-  margin-top: 15px;
-  height: 220px;
-  overflow-y: auto;
-  background: #f9fafb;
-  border: 1px solid #eee;
-  border-radius: 10px;
-  padding: 10px;
-  white-space: pre-wrap;
+.copy-format {
+  background: #f59e0b;
+  color: white;
 }
 
-.msg {
-  padding: 8px;
-  margin-bottom: 8px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #eee;
-}
-
+/* 状态 */
 .status {
   text-align: center;
-  font-size: 13px;
+  font-size: 12px;
   color: #666;
-  margin-top: 10px;
 }
 </style>
 </head>
@@ -92,16 +124,28 @@ button {
 <body>
 
 <div class="container">
-  <h2>📋 Pastebox 剪贴板</h2>
 
-  <input id="input" placeholder="输入内容...">
-  <button class="send" onclick="send()">发送</button>
+  <!-- 顶部 -->
+  <div class="header">📋 Pastebox Chat</div>
 
+  <!-- 消息区 -->
   <div id="output"></div>
 
-  <button class="copy" onclick="copyText()">复制最新一条</button>
+  <!-- 输入区（固定底部） -->
+  <div class="input-area">
 
-  <div class="status" id="status">初始化中...</div>
+    <textarea id="input" placeholder="输入内容..."></textarea>
+
+    <button class="send" onclick="send()">发送</button>
+
+    <button class="copy" onclick="copyText()">复制最新一条</button>
+
+    <button class="copy-format" onclick="copyFormatted()">复制带格式版本</button>
+
+    <div class="status" id="status">初始化中...</div>
+
+  </div>
+
 </div>
 
 <script>
@@ -109,32 +153,15 @@ button {
 let supabaseClient = null
 let latestText = ""
 
-// =======================
-// 初始化
-// =======================
 document.addEventListener("DOMContentLoaded", () => {
 
-  const URL = "https://dqmrzxltmwwtdziidqmg.supabase.co".trim()
+  const URL = "https://dqmrzxltmwwtdziidqmg.supabase.co"
   const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxbXJ6eGx0bXd3dGR6aWlkcW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzQyNDcsImV4cCI6MjA5MzY1MDI0N30.nFrYz5XRzgfcXj3O0bnBqP9gzvDQvFypu6QgrLOGkCo"
 
-  if (!KEY || KEY.includes("YOUR")) {
-    alert("请填写 Supabase Anonymous API Key")
-    return
-  }
-
-  try {
-    supabaseClient = window.supabase.createClient(URL, KEY)
-  } catch (err) {
-    console.error(err)
-    document.getElementById("status").innerText = "初始化失败"
-    return
-  }
+  supabaseClient = window.supabase.createClient(URL, KEY)
 
   document.getElementById("status").innerText = "连接中..."
 
-  // =======================
-  // 实时监听
-  // =======================
   supabaseClient
     .channel('pastebox-sync')
     .on('postgres_changes', {
@@ -152,6 +179,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const output = document.getElementById("output")
       output.appendChild(div)
+
+      // ⭐自动滚到底部（聊天核心体验）
       output.scrollTop = output.scrollHeight
 
       document.getElementById("status").innerText = "已同步 ✔"
@@ -168,45 +197,55 @@ document.addEventListener("DOMContentLoaded", () => {
 // =======================
 async function send() {
 
-  if (!supabaseClient) {
-    alert("Supabase 未初始化完成")
-    return
-  }
+  if (!supabaseClient) return
 
   const input = document.getElementById("input")
-  const text = input.value.trim()
+  const text = input.value
 
-  if (!text) return
+  if (!text.trim()) return
 
-  const { error } = await supabaseClient
+  await supabaseClient
     .from('data')
     .insert([{ text }])
 
-  if (error) {
-    alert("发送失败：" + error.message)
-    return
-  }
-
   input.value = ""
-  document.getElementById("status").innerText = "发送成功 ✔"
 }
 
 
 // =======================
-// 复制最新
+// 复制纯文本
 // =======================
 function copyText() {
-  if (!latestText) {
-    alert("没有内容")
-    return
-  }
-
+  if (!latestText) return alert("没有内容")
   navigator.clipboard.writeText(latestText)
   document.getElementById("status").innerText = "已复制 ✔"
 }
 
-</script>
 
-</body> 
+// =======================
+// 复制带格式
+// =======================
+function copyFormatted() {
 
-</html>  
+  if (!latestText) return alert("没有内容")
+
+  const formatted =
+`📋 Pastebox Chat
+────────────────
+${latestText}
+────────────────
+时间：${new Date().toLocaleString()}`
+
+  navigator.clipboard.writeText(formatted)
+  document.getElementById("status").innerText = "已复制带格式版本 ✔"
+}
+
+</script> 
+
+
+
+
+
+
+</body>
+</html> 
