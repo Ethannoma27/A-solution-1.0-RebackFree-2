@@ -60,7 +60,10 @@ body {
   background: white;
   border-radius: 10px;
   border: 1px solid #eee;
-  white-space: pre-wrap;
+  white-space: pre-wrap; 
+
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* =======================
@@ -339,9 +342,6 @@ ${latestText}
   navigator.clipboard.writeText(formatted)
   document.getElementById("status").innerText = "已复制带格式版本 ✔"
 }
-
-
-
 
 </script> 
 
