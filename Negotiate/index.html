@@ -105,24 +105,23 @@ button {
 
 <script>
 // ======================
-// 🔑 填你的 Supabase
+// 🔑 Supabase 配置
 // ======================
+
 const URL = "https://dqmrzxltmwwtdziidqmg.supabase.co"
 const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxbXJ6eGx0bXd3dGR6aWlkcW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzQyNDcsImV4cCI6MjA5MzY1MDI0N30.nFrYz5XRzgfcXj3O0bnBqP9gzvDQvFypu6QgrLOGkCo"
 
-// 防止没填 key
+
+// 防呆
 if (!KEY || KEY.includes("你的")) {
   alert("请先填写 Supabase KEY")
   throw new Error("Missing KEY")
 }
 
-// 创建客户端
-const supabase = window.supabase.createClient(URL, KEY)
+// ⚠️ 防止重复声明（核心修复）
+let supabaseClient = window.supabase.createClient(URL, KEY)
 
 let latestText = ""
-
-// 状态
-document.getElementById("status").innerText = "连接中..."
 
 
 // ======================
@@ -132,7 +131,7 @@ async function send() {
   const text = document.getElementById("input").value
   if (!text) return
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('data')
     .insert([{ text }])
 
@@ -150,7 +149,7 @@ async function send() {
 // ======================
 // 📡 实时监听
 // ======================
-supabase
+supabaseClient
   .channel('clipboard-sync')
   .on('postgres_changes', {
     event: 'INSERT',
@@ -173,6 +172,12 @@ supabase
   })
   .subscribe((status) => {
     console.log("Realtime status:", status)
+
+    if (status === "SUBSCRIBED") {
+      document.getElementById("status").innerText = "已连接 ✔"
+    } else {
+      document.getElementById("status").innerText = "连接中..."
+    }
   })
 
 
@@ -190,7 +195,6 @@ function copyText() {
 }
 </script>
 
-</body> 
+</body>
+</html>
 
-
-</html>   
