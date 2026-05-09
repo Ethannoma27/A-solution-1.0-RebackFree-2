@@ -333,20 +333,11 @@ function buildFlow(text, isAI = true) {
 
   if (!isAI) return [text]
 
-  // ⭐ 关键修复：每一轮只出现一次引导
-  if (isFirstAIInTurn) {
-
-    isFirstAIInTurn = false
-
-    return [
-      "下面开始展开对话…",
-
-      text
-    ]
-  }
+  // ⭐ 取消开头引导文字
+  isFirstAIInTurn = false
 
   return [text]
-}
+} 
 
 // =======================
 // ⭐ 单条Flow执行
