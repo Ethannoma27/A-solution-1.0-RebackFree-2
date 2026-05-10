@@ -298,7 +298,6 @@ function parseMarkdown(text) {
   return result.join("")
 }
 
-
 // =======================
 // Flow结构（AI专用）
 // =======================
@@ -309,7 +308,7 @@ function buildFlow(text, isAI = true) {
 }
 
 // =======================
-// 单条Flow执行
+// 单条Flow执行（去掉打字效果）
 // =======================
 async function playSingleFlow(text, id, table, isAI = true) {
   const div = document.createElement("div")
@@ -325,27 +324,12 @@ async function playSingleFlow(text, id, table, isAI = true) {
 
   const content = document.createElement("div")
   content.className = "msg-content"
+  content.innerHTML = parseMarkdown(text) // ✅ 直接显示文本
   div.appendChild(content)
 
   const output = document.getElementById("output")
   output.appendChild(div)
   output.scrollTop = output.scrollHeight
-
-  const parts = buildFlow(text, isAI)
-  let fullText = ""
-
-  for (let i = 0; i < parts.length; i++) {
-    const line = document.createElement("div")
-    line.className = "msg-line"
-    content.appendChild(line)
-    await new Promise(r => setTimeout(r, 250 + Math.random() * 500))
-    await typeText(line, parts[i], 28)
-    fullText += parts[i] + "\n\n"
-    await new Promise(r => setTimeout(r, 700 + Math.random() * 1500))
-    output.scrollTop = output.scrollHeight
-  }
-
-  content.innerHTML = parseMarkdown(fullText)
 
   // 操作按钮
   const actions = document.createElement("div")
@@ -398,7 +382,7 @@ function enqueue(text, id, table, isAI = true) {
 // =======================
 document.addEventListener("DOMContentLoaded", async () => {
   const URL = "https://qpzelzelhyqlnhthibbp.supabase.co"
-  const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwemVsemVsaHlxbG5odGhpYmJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMjkzNDcsImV4cCI6MjA5MzkwNTM0N30.maF1VUS-ogw17jB6h7HbEpU2-gzgdrx-fY4zNd0Apqc"
+  const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwemVsemVsaHlxbG5odGhpYmJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMjkzNDcsImV4cCI6MjA5MzkwNTM0N30.maF1VUS-ogw17jB6h7HbEpU2-gzgdrx-fY4zNd0Apqc" // 🔒 建议用环境变量或 .env 隐藏
 
   supabaseClient = window.supabase.createClient(URL, KEY)
 
@@ -479,22 +463,6 @@ async function switchTable(tableName, btnEl) {
     data.forEach(item => enqueue(item.text, item.id, currentTable, true))
   }
 } 
-
 </script> 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 </body> 
 </html>      
