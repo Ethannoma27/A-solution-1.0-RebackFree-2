@@ -8,8 +8,10 @@
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 <style>
+
+
 /* =======================
-   全局
+   全局（轻微优化节奏）
 ======================= */
 body {
   margin: 0;
@@ -37,38 +39,13 @@ body {
 }
 
 /* =======================
-   标题 + 标签切换
+   标题
 ======================= */
 .header {
   padding: 14px;
   text-align: center;
   font-weight: 600;
   border-bottom: 1px solid #eee;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tab-switch {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.tab-btn {
-  padding: 6px 14px;
-  border-radius: 12px;
-  border: none;
-  background: #f3f4f6;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-
-.tab-btn.active {
-  background: #4f8cff;
-  color: white;
-  font-weight: 600;
 }
 
 /* =======================
@@ -82,7 +59,7 @@ body {
 }
 
 /* =======================
-   消息气泡
+   消息气泡（关键优化）
 ======================= */
 .msg {
   padding: 12px;
@@ -91,25 +68,33 @@ body {
   border-radius: 12px;
   border: 1px solid #eee;
   position: relative;
+
   word-break: break-word;
   overflow-wrap: anywhere;
 }
 
+/* =======================
+   Markdown 内容（核心节奏系统）
+======================= */
 .msg-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 10px;   /* ⭐ 核心：统一垂直节奏 */
 }
 
+/* 清除默认外边距干扰 */
 .msg-content > * {
   margin: 0;
 }
 
+/* 段落 */
 .msg-content p {
   margin: 0;
   line-height: 1.65;
-}
+} 
 
+
+/* 标题 */
 .msg-content h1,
 .msg-content h2,
 .msg-content h3 {
@@ -118,12 +103,14 @@ body {
   line-height: 1.3;
 }
 
+/* 列表 */
 .msg-content ul,
 .msg-content ol {
   margin: 0;
   padding-left: 18px;
 }
 
+/* 列表项 */
 .msg-content li {
   margin: 4px 0;
   line-height: 1.55;
@@ -141,6 +128,7 @@ body {
   gap: 8px;
 }
 
+/* 输入框 */
 textarea {
   width: 100%;
   height: 80px;
@@ -153,6 +141,7 @@ textarea {
   outline: none;
 }
 
+/* 按钮 */
 button {
   padding: 10px;
   border: none;
@@ -176,14 +165,17 @@ button {
   color: white;
 }
 
+/* 状态 */
 .status {
   text-align: center;
   font-size: 12px;
   color: #666;
 }
 
+
+
 /* =======================
-   操作按钮
+   操作按钮容器（更轻层级）
 ======================= */
 .msg-actions {
   position: absolute;
@@ -191,24 +183,37 @@ button {
   right: 6px;
   display: flex;
   gap: 4px;
-  opacity: 0.85;
+
+  opacity: 0.85;          /* ⭐ 再弱一点 */
   transition: opacity 0.18s ease;
   pointer-events: auto;
 }
 
+
+/* =======================
+   按钮（高级轻玻璃感）
+======================= */
 .msg-btn {
   font-size: 11px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);  /* ⭐ 轻边框（关键提升质感） */
   padding: 2px 6px;
-  border-radius: 7px;
+  border-radius: 7px;                     /* ⭐ 更柔一点点 */
+
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.65);
-  color: #444;
-  backdrop-filter: blur(6px);
+
+  background: rgba(255, 255, 255, 0.65); /* ⭐ 从“灰块”变“轻白玻璃” */
+  color: #444;                            /* ⭐ 稍微柔化黑色 */
+
+  backdrop-filter: blur(6px);            /* ⭐ 稍强一点点但仍克制 */
   -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04); /* ⭐ 极轻浮层感 */
+
   transition: background 0.15s ease, opacity 0.15s ease;
-}
+} 
+
+
+
 </style>
 </head>
 
@@ -217,27 +222,22 @@ button {
 <div class="container">
 
   <!-- 顶部 -->
-  <div class="header">
-    📋 Pastebox Chat
-    <div class="tab-switch">
-      <!-- ⭐ 改成实际表名 data / data2 -->
-      <button class="tab-btn active" onclick="switchTable('data', this)">Youtube UK</button>
-      <button class="tab-btn" onclick="switchTable('data2', this)">Youtube LLC</button>
-    </div>
-  </div>
+  <div class="header">📋 Pastebox Chat</div>
 
   <!-- 消息区 -->
   <div id="output"></div>
 
   <!-- 输入区 -->
   <div class="input-area">
+
     <textarea id="input" placeholder="输入内容..."></textarea>
+
     <button class="send" onclick="send()">发送</button>
     <button class="copy" onclick="copyText()">复制</button>
-    <div class="status" id="status">初始化中...</div>
-  </div>
 
-</div> 
+    <div class="status" id="status">初始化中...</div>
+
+  </div>
 
 </div>
 
@@ -246,23 +246,24 @@ button {
 let supabaseClient = null
 let latestText = ""
 let msgIndex = 0
-let currentTable = "data" // 默认表格
 
 // =======================
-// 队列系统
+// ⭐ 队列系统
 // =======================
 let queue = []
 let running = false
 
 // =======================
-// AI控制
+// ⭐ 关键修复：控制“AI每轮只引导一次”
 // =======================
 let isFirstAIInTurn = true
 
+
 // =======================
-// Markdown解析
+// ⭐ Markdown解析
 // =======================
 function parseMarkdown(text) {
+
   const lines = text.split("\n")
   const result = []
   let listBuffer = []
@@ -277,6 +278,7 @@ function parseMarkdown(text) {
   }
 
   for (let line of lines) {
+
     let l = line.trim()
     if (!l) continue
 
@@ -298,73 +300,132 @@ function parseMarkdown(text) {
   return result.join("")
 }
 
+
 // =======================
-// 打字效果
+// ⭐ 打字效果
 // =======================
 function typeText(el, text, speed = 30) {
+
   return new Promise(resolve => {
+
     let i = 0
     el.textContent = ""
+
     const timer = setInterval(() => {
+
       el.textContent += text[i]
       i++
+
       if (i >= text.length) {
         clearInterval(timer)
         resolve()
       }
+
     }, speed)
   })
 }
 
-// =======================
-// Flow结构（AI专用）
-// =======================
-function buildFlow(text, isAI = true) {
-  if (!isAI) return [text]
-  isFirstAIInTurn = false
-  return [text]
-}
 
 // =======================
-// 单条Flow执行
+// ⭐ Flow结构（AI专用）
 // =======================
-async function playSingleFlow(text, id, table, isAI = true) {
+function buildFlow(text, isAI = true) {
+
+  if (!isAI) return [text]
+
+  // ⭐ 取消开头引导文字
+  isFirstAIInTurn = false
+
+  return [text]
+} 
+
+// =======================
+// ⭐ 单条Flow执行
+// =======================
+async function playSingleFlow(text, id, isAI = true) {
+
   const div = document.createElement("div")
   div.className = "msg"
 
-  const isEven = (msgIndex % 2 === 0)
-  div.style.background = isEven ? "#f3f4f6" : "#ffffff"
-  div.style.alignSelf = isEven ? "flex-end" : "flex-start"
-  div.style.maxWidth = "75%"
-  div.style.marginLeft = isEven ? "auto" : "0"
-  div.style.marginRight = isEven ? "0" : "auto"
-  msgIndex++
+ 
+// =======================
+// ⭐ 顺序灰白 + 左右统一交替（最终版）
+// =======================
+const isEven = (msgIndex % 2 === 0)
 
-  const content = document.createElement("div")
-  content.className = "msg-content"
-  div.appendChild(content)
+// ⭐ 背景交替
+div.style.background = isEven ? "#f3f4f6" : "#ffffff" 
 
-  const output = document.getElementById("output")
-  output.appendChild(div)
+
+// ⭐ 左右交替（关键：不再依赖 isAI）
+div.style.alignSelf = isEven ? "flex-end" : "flex-start"
+
+// ⭐ 气泡最大宽度（更像聊天）
+div.style.maxWidth = "75%"
+
+// ⭐ 防止贴边
+div.style.marginLeft = isEven ? "auto" : "0"
+div.style.marginRight = isEven ? "0" : "auto"
+
+// ⭐ 计数++
+msgIndex++
+
+
+// =======================
+// ⭐ 内容容器
+// =======================
+const content = document.createElement("div")
+content.className = "msg-content"
+
+div.appendChild(content)
+
+const output = document.getElementById("output")
+output.appendChild(div)
+
+output.scrollTop = output.scrollHeight
+
+
+// =======================
+// ⭐ Flow执行
+// =======================
+const parts = buildFlow(text, isAI)
+
+let fullText = ""
+
+for (let i = 0; i < parts.length; i++) {
+
+  const line = document.createElement("div")
+  line.className = "msg-line"
+
+  content.appendChild(line)
+
+  // ⭐ 呼吸延迟
+  await new Promise(r =>
+    setTimeout(r, 250 + Math.random() * 500)
+  )
+
+  // ⭐ 打字效果
+  await typeText(line, parts[i], 28)
+
+  fullText += parts[i] + "\n\n"
+
+  // ⭐ 不规则停顿
+  await new Promise(r =>
+    setTimeout(r, 700 + Math.random() * 1500)
+  )
+
   output.scrollTop = output.scrollHeight
+}
 
-  const parts = buildFlow(text, isAI)
-  let fullText = ""
 
-  for (let i = 0; i < parts.length; i++) {
-    const line = document.createElement("div")
-    line.className = "msg-line"
-    content.appendChild(line)
-    await new Promise(r => setTimeout(r, 250 + Math.random() * 500))
-    await typeText(line, parts[i], 28)
-    fullText += parts[i] + "\n\n"
-    await new Promise(r => setTimeout(r, 700 + Math.random() * 1500))
-    output.scrollTop = output.scrollHeight
-  }
+// =======================
+// ⭐ Flow结束 → Markdown渲染
+// =======================
+content.innerHTML = parseMarkdown(fullText) 
 
-  content.innerHTML = parseMarkdown(fullText)
-
-  // 操作按钮
+  // =======================
+  // ⭐ 操作按钮
+  // =======================
   const actions = document.createElement("div")
   actions.className = "msg-actions"
 
@@ -377,10 +438,12 @@ async function playSingleFlow(text, id, table, isAI = true) {
   delBtn.className = "msg-btn"
   delBtn.innerText = "删除"
   delBtn.onclick = async () => {
+
     const { error } = await supabaseClient
-      .from(table)
+      .from('data')
       .delete()
       .eq('id', id)
+
     if (!error) div.remove()
   }
 
@@ -389,31 +452,41 @@ async function playSingleFlow(text, id, table, isAI = true) {
   div.appendChild(actions)
 }
 
+
 // =======================
-// 队列
+// ⭐ 队列
 // =======================
 async function runQueue() {
+
   if (running) return
   running = true
+
   while (queue.length > 0) {
+
     const item = queue.shift()
-    await playSingleFlow(item.text, item.id, item.table, item.isAI)
+
+    await playSingleFlow(item.text, item.id, item.isAI)
   }
+
   running = false
 }
 
+
 // =======================
-// 入队
+// ⭐ 入队（关键：增加 role）
 // =======================
-function enqueue(text, id, table, isAI = true) {
-  queue.push({ text, id, table, isAI })
+function enqueue(text, id, isAI = true) {
+
+  queue.push({ text, id, isAI })
   runQueue()
 }
 
+
 // =======================
-// Supabase初始化
+// ⭐ Supabase初始化
 // =======================
 document.addEventListener("DOMContentLoaded", async () => {
+
   const URL = "https://qpzelzelhyqlnhthibbp.supabase.co"
   const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwemVsemVsaHlxbG5odGhpYmJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMjkzNDcsImV4cCI6MjA5MzkwNTM0N30.maF1VUS-ogw17jB6h7HbEpU2-gzgdrx-fY4zNd0Apqc"
 
@@ -422,85 +495,72 @@ document.addEventListener("DOMContentLoaded", async () => {
   const status = document.getElementById("status")
   status.innerText = "连接中..."
 
-  // 初始拉取当前表格数据
   const { data, error } = await supabaseClient
-    .from(currentTable)
+    .from('data')
     .select('*')
     .order('id', { ascending: true })
 
   if (!error && data) {
-    data.forEach(item => enqueue(item.text, item.id, currentTable, true))
+    data.forEach(item => {
+      enqueue(item.text, item.id, true)
+    })
   }
 
-  // 全局订阅支持 data / data2
-  const channel = supabaseClient
-    .channel('pastebox-sync-global')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'data' }, payload => {
-      if (currentTable === 'data') enqueue(payload.new.text, payload.new.id, 'data', true)
-      status.innerText = "已同步 ✔"
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'data2' }, payload => {
-      if (currentTable === 'data2') enqueue(payload.new.text, payload.new.id, 'data2', true)
-      status.innerText = "已同步 ✔"
-    })
+  supabaseClient
+    .channel('pastebox-sync')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'data'
+    }, (payload) => {
 
-  await channel.subscribe(state => {
-    status.innerText = state === "SUBSCRIBED" ? "已连接 ✔" : "连接中..."
-  })
+      enqueue(payload.new.text, payload.new.id, true)
+
+      status.innerText = "已同步 ✔"
+    })
+    .subscribe((state) => {
+
+      status.innerText =
+        state === "SUBSCRIBED"
+          ? "已连接 ✔"
+          : "连接中..."
+    })
 })
 
+
 // =======================
-// 发送消息
+// ⭐ 发送
 // =======================
 async function send() {
+
   if (!supabaseClient) return
+
   const input = document.getElementById("input")
   const text = input.value
+
   if (!text.trim()) return
+
+  // ⭐ 用户发送 → 重置AI引导状态
   isFirstAIInTurn = true
+
   await supabaseClient
-    .from(currentTable)
+    .from('data')
     .insert([{ text }])
+
   input.value = ""
 }
 
-// =======================
-// 复制文本
+// ======================= 
+
+// ⭐ 复制
 // =======================
 function copyText() {
   if (!latestText) return
   navigator.clipboard.writeText(latestText)
-}
-
-// =======================
-// 切换表格 Page1 / Page2
-// =======================
-async function switchTable(tableName, btnEl) {
-  currentTable = tableName
-
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
-  btnEl.classList.add('active')
-
-  // 清空消息区和计数
-  document.getElementById('output').innerHTML = ''
-  msgIndex = 0
-  queue = []
-
-  // 拉取对应表格数据
-  const { data, error } = await supabaseClient
-    .from(currentTable)
-    .select('*')
-    .order('id', { ascending: true })
-
-  if (!error && data) {
-    data.forEach(item => enqueue(item.text, item.id, currentTable, true))
-  }
 } 
 
+
 </script> 
-
-
-
 
 </body> 
 </html>      
